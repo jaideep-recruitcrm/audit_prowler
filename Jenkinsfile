@@ -24,7 +24,18 @@ pipeline {
             steps {
                 sh "export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
                 sh "export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
-                sh "python3.10 -m prowler aws -S -f ap-south-1 -C /tmp/checks_passing.json -o ./scan_result"
+                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                    sh "python3.10 -m prowler aws -S -f ap-south-1 -C /tmp/checks_gdpr_aws.json -o ./scan_result"
+                }
+            }
+        }
+        stage('Sending to slack') {
+            steps {
+                sh 'zip -r scan_result.zip scan_result/'
+                sh 'mv scan_result.zip /tmp/'
+                sh 'python3.10 -m pip install slack-sdk'
+                sh 'python3.10 /tmp/send_slack_message.py'
+                sh 'rm -rf /tmp/scan_result.zip'
             }
         }
     }
